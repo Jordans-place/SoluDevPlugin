@@ -1,8 +1,13 @@
 from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from pathlib import Path
 import os
 import requests
+
+from .config import config
+
+OUT_DIR_PATH: str = config.SERVICE.OUT_DIR_PATH
 
 load_dotenv()
 
@@ -13,6 +18,10 @@ def get_env_variable(variable_name: str) -> str:
         raise ValueError(f"Environment variable {variable_name} is missing")
     return value
 
+def get_output_file_path(filename: str) -> Path:
+    out_dir = Path(OUT_DIR_PATH)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / filename
 
 def build_session(total_retries: int = 5, backoff_factor: float = 0.5) -> requests.Session:
     session = requests.Session()

@@ -1,48 +1,63 @@
 import json
-
-from src.Anecdotes_auth import AnecdotesAuth
-from src.common import utils
-from src.common.logger import CustomLogger
-from time import sleep
 from pathlib import Path
+from time import sleep
 
-from src.local_backup import LocalBackup
-from src.soludev_client import SoluDevClient
-from src.uploader import AnecdotesUploader
+from src.auth.anecdotes_auth import AnecdotesAuth
+from src.clients.soludev_client import SoluDevClient
+from src.common import utils
 from src.common.config import config
+from src.common.logger import CustomLogger
+from src.storage.local_backup import LocalBackup
+from src.uploaders.anecdotes_uploader import AnecdotesAuthenticationError, AnecdotesUploader
 
-
-SOLUDEV_BASE_URL: str = config.HTTP.SOLUDEV_BASE_URL
-TIMEOUT_SECONDS: int = config.HTTP.TIMEOUT_SECONDS
-SOLUDEV_USERNAME = utils.get_env_variable('SOLUDEV_USERNAME')
-SOLUDEV_API_KEY = utils.get_env_variable('SOLUDEV_API_KEY')
-ANECDOTES_API_KEY = utils.get_env_variable("ANECDOTES_API_KEY")
 
 BACKUP_FILE_NAME: str = config.SERVICE.BACKUP_FILE_NAME
-OUT_DIR_PATH: str = config.SERVICE.OUT_DIR_PATH
-USERS_FILE_NAME: str = config.SERVICE.USERS_FILE_NAME
-ROLES_FILE_NAME: str = config.SERVICE.ROLES_FILE_NAME
-OUT_DIR = Path(OUT_DIR_PATH)
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-BACKUP_FILE_PATH: Path = OUT_DIR / BACKUP_FILE_NAME
-USERS_FILE_PATH: Path = OUT_DIR / USERS_FILE_NAME
-ROLES_FILE_PATH: Path = OUT_DIR / ROLES_FILE_NAME
+EVIDENCE_NAME_PREFIX: str = config.SERVICE.EVIDENCE_NAME_PREFIX
 MAIN_COMPONENT_NAME: str = config.LOGGING.MAIN_COMPONENT_NAME
 LOG_FILE_NAME: str = config.LOGGING.COMPONENT_TO_LOG_FILE.get(MAIN_COMPONENT_NAME)
+RETRY_DELAY_SECONDS: int = config.SERVICE.RETRY_DELAY_SECONDS
+ROLES_FILE_NAME: str = config.SERVICE.ROLES_FILE_NAME
+SOLUDEV_BASE_URL: str = config.HTTP.SOLUDEV_BASE_URL
+TIMEOUT_SECONDS: int = config.HTTP.TIMEOUT_SECONDS
+USERS_FILE_NAME: str = config.SERVICE.USERS_FILE_NAME
+
+ANECDOTES_API_KEY = utils.get_env_variable("ANECDOTES_API_KEY")
+SOLUDEV_API_KEY = utils.get_env_variable('SOLUDEV_API_KEY')
+SOLUDEV_USERNAME = utils.get_env_variable('SOLUDEV_USERNAME')
+BACKUP_FILE_PATH = utils.get_output_file_path(BACKUP_FILE_NAME)
+ROLES_FILE_PATH = utils.get_output_file_path(ROLES_FILE_NAME)
+USERS_FILE_PATH = utils.get_output_file_path(USERS_FILE_NAME)
 
 logger = CustomLogger(MAIN_COMPONENT_NAME, LOG_FILE_NAME)
 
 
-def process_and_upload(uploader: AnecdotesUploader, auth: AnecdotesAuth, users: list[dict], roles: list[dict], backup: LocalBackup = None):
-    USERS_FILE_PATH.write_text(json.dumps(users, indent=4, ensure_ascii=False), encoding="utf-8")
-    ROLES_FILE_PATH.write_text(json.dumps(roles, indent=4, ensure_ascii=False), encoding="utf-8")
+def _get_evidence_name(file_stem: str) -> str:
+    return f"{EVIDENCE_NAME_PREFIX}-{file_stem.capitalize()}"
 
-    for file_path in [USERS_FILE_PATH, ROLES_FILE_PATH]:
-        try:
-            uploader.upload_file("SoluDev " + file_path.stem.capitalize(), str(file_path))
-        except PermissionError:
-            auth.refresh_on_401(uploader._session)
-            uploader.upload_file("SoluDev " + file_path.stem.capitalize(), str(file_path))
+
+def _save_data_to_file(file_path: Path, data: list[dict]):
+    file_path.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
+
+
+def upload_with_retry(uploader: AnecdotesUploader, auth: AnecdotesAuth, evidence_name: str, file_path: Path) -> None:
+    try:
+        uploader.upload_file(evidence_name, str(file_path))
+    except AnecdotesAuthenticationError:
+        auth.refresh_token(uploader._session)
+        uploader.upload_file(evidence_name, str(file_path))
+
+
+def process_and_upload(
+        uploader: AnecdotesUploader,
+        auth: AnecdotesAuth,
+        users: list[dict],
+        roles: list[dict],
+        backup: LocalBackup):
+    _save_data_to_file(USERS_FILE_PATH, users)
+    _save_data_to_file(ROLES_FILE_PATH, roles)
+
+    upload_with_retry(uploader, auth, _get_evidence_name(USERS_FILE_PATH.stem), USERS_FILE_PATH)
+    upload_with_retry(uploader, auth, _get_evidence_name(ROLES_FILE_PATH.stem), ROLES_FILE_PATH)
 
     if backup is not None:
         backup.clear()
@@ -51,7 +66,7 @@ def process_and_upload(uploader: AnecdotesUploader, auth: AnecdotesAuth, users: 
 def main():
     session = utils.build_session()
     soludev_client = SoluDevClient(SOLUDEV_BASE_URL, SOLUDEV_USERNAME, SOLUDEV_API_KEY, session, TIMEOUT_SECONDS)
-    soludev_client.login()
+    # soludev_client.login()
 
     anecdotes_auth = AnecdotesAuth(api_key=ANECDOTES_API_KEY, session=session)
     anecdotes_auth.apply(session)
@@ -59,7 +74,8 @@ def main():
     backup = LocalBackup(BACKUP_FILE_PATH)
     uploader = AnecdotesUploader(session=session, service_id="SoluDev")
 
-    while True:
+    success = False
+    while not success:
         try:
             backup_data = backup.load()
             if backup_data:
@@ -67,17 +83,18 @@ def main():
                 users_from_backup = backup_data.get("users", [])
                 roles_from_backup = backup_data.get("roles", [])
                 process_and_upload(uploader, anecdotes_auth, users_from_backup, roles_from_backup, backup)
-                break
+                success = True
+                continue
 
             users = [user.model_dump() for user in soludev_client.get_users()]
-            roles_arr = [role.model_dump() for role in soludev_client.get_roles()]
-            backup.save({"users": users, "roles": roles_arr})
-            process_and_upload(uploader, anecdotes_auth, users, roles_arr, backup)
-            break
+            roles = [role.model_dump() for role in soludev_client.get_roles()]
+            backup.save({"users": users, "roles": roles})
+            process_and_upload(uploader, anecdotes_auth, users, roles, backup)
+            success = True
 
         except Exception as e:
             logger.error("Process failed, retrying in 60s...", extra={"error": str(e)})
-            sleep(60)
+            sleep(RETRY_DELAY_SECONDS)
 
 
 if __name__ == "__main__":

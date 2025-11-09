@@ -7,7 +7,6 @@ from src.common.config import config
 SOLUDEV_CLIENT_NAME: str = config.LOGGING.SOLUDEV_CLIENT_NAME
 LOG_FILE_NAME: str = config.LOGGING.COMPONENT_TO_LOG_FILE.get(SOLUDEV_CLIENT_NAME)
 
-
 logger = CustomLogger(component=SOLUDEV_CLIENT_NAME, log_file=LOG_FILE_NAME)
 
 
@@ -61,3 +60,4 @@ class SoluDevClient:
 
         logger.info("Fetched roles", count=len(roles))
         return [Role(**role) for role in roles]
+

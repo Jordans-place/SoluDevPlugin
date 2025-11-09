@@ -4,7 +4,9 @@
     "BACKUP_FILE_NAME": "backup.json",
     "USERS_FILE_NAME": "users.json",
     "ROLES_FILE_NAME": "roles.json",
-    "EVIDENCE_IDS_FILE_NAME":"evidence_ids.json"
+    "EVIDENCE_IDS_FILE_NAME":"evidence_ids.json",
+    "EVIDENCE_NAME_PREFIX": "SoluDev",
+    "RETRY_DELAY_SECONDS": 60
   },
   "HTTP": {
     "SOLUDEV_BASE_URL": "http://10.1.0.14:8080",
