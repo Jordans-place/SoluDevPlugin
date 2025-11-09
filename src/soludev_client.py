@@ -2,8 +2,13 @@ import requests
 
 from src.common.logger import CustomLogger
 from src.common.models import User, Role
+from src.common.config import config
 
-logger = CustomLogger(component='SOLUDEV_CLIENT', log_file='logs/soludev_plugin.log')
+SOLUDEV_CLIENT_NAME: str = config.LOGGING.SOLUDEV_CLIENT_NAME
+LOG_FILE_NAME: str = config.LOGGING.COMPONENT_TO_LOG_FILE.get(SOLUDEV_CLIENT_NAME)
+
+
+logger = CustomLogger(component=SOLUDEV_CLIENT_NAME, log_file=LOG_FILE_NAME)
 
 
 class SoluDevClient:

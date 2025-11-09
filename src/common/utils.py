@@ -6,11 +6,13 @@ import requests
 
 load_dotenv()
 
-def get_env_variable(var_name: str) -> str:
-    value = os.getenv(var_name)
+
+def get_env_variable(variable_name: str) -> str:
+    value = os.getenv(variable_name)
     if not value:
-        raise ValueError(f"Environment variable {var_name} is missing")
+        raise ValueError(f"Environment variable {variable_name} is missing")
     return value
+
 
 def build_session(total_retries: int = 5, backoff_factor: float = 0.5) -> requests.Session:
     session = requests.Session()

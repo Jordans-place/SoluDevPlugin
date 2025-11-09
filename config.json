@@ -1,4 +1,25 @@
 {
   "SERVICE": {
+    "OUT_DIR_PATH": "./out",
+    "BACKUP_FILE_NAME": "backup.json",
+    "USERS_FILE_NAME": "users.json",
+    "ROLES_FILE_NAME": "roles.json",
+    "EVIDENCE_IDS_FILE_NAME":"evidence_ids.json"
+  },
+  "HTTP": {
+    "SOLUDEV_BASE_URL": "http://10.1.0.14:8080",
+    "TIMEOUT_SECONDS": 10,
+    "ANECDOTES_AUTH_EXCHANGE_URL": "https://gateway.anecdotes.ai/identity/v1/apikey/exchange",
+    "ANECDOTES_UPLOADER_BASE_URL": "https://gateway.anecdotes.ai/evidence/v1/evidence"
+  },
+  "LOGGING": {
+    "MAIN_COMPONENT_NAME": "MAIN",
+    "SOLUDEV_CLIENT_NAME": "SOLUDEV_CLIENT",
+    "ANECDOTES_UPLOADER_NAME": "ANECDOTES_UPLOADER",
+    "COMPONENT_TO_LOG_FILE":{
+      "MAIN": "logs/main.log",
+      "SOLUDEV_CLIENT": "logs/soludev_client.log",
+      "ANECDOTES_UPLOADER": "logs/anecdotes_uploader.log"
+    }
   }
 }

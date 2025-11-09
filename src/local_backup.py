@@ -3,8 +3,8 @@ from pathlib import Path
 
 
 class LocalBackup:
-    def __init__(self, backup_path: str):
-        self.path = Path(backup_path)
+    def __init__(self, backup_path: Path):
+        self.path = backup_path
 
     def save(self, data: dict):
         with open(self.path, "w", encoding="utf-8") as file:

@@ -1,19 +1,22 @@
 import time
 import requests
 
-class AnecdotesAuth:
-    EXCHANGE_URL = "https://gateway.anecdotes.ai/identity/v1/apikey/exchange"
+from src.common.config import config
 
-    def __init__(self, api_key: str, session: requests.Session | None = None):
+ANECDOTES_AUTH_EXCHANGE_URL: str = config.HTTP.ANECDOTES_AUTH_EXCHANGE_URL
+
+class AnecdotesAuth:
+    def __init__(self, api_key: str, session: requests.Session):
         if not api_key or not api_key.strip():
             raise ValueError("ANECDOTES API key is empty")
         self._api_key = api_key.strip()
-        self._s = session or requests.Session()
+        self._session = session
         self._jwt = None
         self._exp_ts = 0
+        self.anecdotes_auth_exchange_url = ANECDOTES_AUTH_EXCHANGE_URL
 
     def _exchange(self):
-        resp = self._s.get(self.EXCHANGE_URL, headers={"x-anecdotes-api-key": self._api_key}, timeout=20)
+        resp = self._session.get(self.anecdotes_auth_exchange_url, headers={"x-anecdotes-api-key": self._api_key}, timeout=20)
         resp.raise_for_status()
         jwt_token = resp.text.strip().strip('"')
         self._jwt = jwt_token
