@@ -1,0 +1,4 @@
+dynaconf
+pydantic
+python-dotenv
+python-multipart
