@@ -19,7 +19,7 @@ logger = CustomLogger("MAIN", "logs/soludev_plugin.log")
 def main():
     session = utils.build_session()
     soludev_client = SoluDevClient(BASE_URL, SOLUDEV_USERNAME, SOLUDEV_API_KEY, session, TIMEOUT_SECONDS)
-    # soludev_client.login()
+    soludev_client.login()
 
     anecdotes_auth = AnecdotesAuth(api_key=ANECDOTES_API_KEY, session=session)
     anecdotes_auth.apply(session)
