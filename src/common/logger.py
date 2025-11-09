@@ -9,7 +9,7 @@ class ComponentFormatter(logging.Formatter):
 
 
 class CustomLogger(logging.Logger):
-    def __init__(self, component: str, name: str = 'logger', level: int = logging.INFO, log_file: str = 'logs/soluDevPlugin.log'):
+    def __init__(self, component: str, log_file: str, name: str = 'logger', level: int = logging.INFO):
         super().__init__(name, level)
 
         log_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', log_file))

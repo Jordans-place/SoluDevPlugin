@@ -1,4 +1,7 @@
 dynaconf
 pydantic
+pydantic[email]
 python-dotenv
 python-multipart
+requests
+urllib3
