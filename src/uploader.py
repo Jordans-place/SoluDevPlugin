@@ -9,10 +9,9 @@ logger = CustomLogger("UPLOADER", "logs/soludev_plugin.log")
 class AnecdotesUploader:
     BASE_URL = "https://gateway.anecdotes.ai/evidence/v1/evidence"
 
-    def __init__(self, token: str, service_id: str = "SoluDev"):
+    def __init__(self, session: requests.Session, service_id: str = "SoluDev"):
         self.service_id = service_id
-        self.token = token
-        self.headers = {"Authorization": f"Bearer {token}"}
+        self._session = session
         self.evidence_ids_file = Path("./out/evidence_ids.json")
         self._ensure_store()
 
@@ -33,31 +32,15 @@ class AnecdotesUploader:
         files = {
             "service_id": (None, self.service_id),
             "evidence_name": (None, evidence_name),
-            "evidence_help": (None, f"Auto‑collected {evidence_name} from SoluDev."),
+            "evidence_help": (None, f"Auto-collected {evidence_name} from SoluDev."),
             "empty_state": (None, empty_state),
             "is_uar": (None, "false"),
             "is_sot": (None, "false"),
         }
-
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-        }
-
-        response = requests.post(
-            f"{self.BASE_URL}/create",
-            headers=headers,
-            files=files,
-            timeout=10
-        )
-
-        if not response.ok:
-            logger.error("Failed to create evidence collection",
-                         extra={"status": response.status_code, "msg": response.text})
-            raise Exception(f"create failed: {response.text}")
-
-        evidence_id = response.json().get("evidence_id")
-        logger.info(f"Created evidence collection: {evidence_name}", evidence_id=evidence_id)
-        return evidence_id
+        resp = self._session.post(f"{self.BASE_URL}/create", files=files, timeout=20)
+        if resp.status_code != 201:
+            raise RuntimeError(f"create failed: {resp.status_code} - {resp.text}")
+        return resp.json().get("evidence_id")
 
     def _get_or_create_evidence_id(self, name: str, empty_state: str) -> str:
         store = self._load_evidence_ids()
@@ -70,16 +53,16 @@ class AnecdotesUploader:
 
     def upload_file(self, evidence_name: str, file_path: str):
         evidence_id = self._get_or_create_evidence_id(
-            name=evidence_name,
-            empty_state=f"No data found in {evidence_name}."
+            evidence_name, f"No data found in {evidence_name}."
         )
 
-        files = {"evidence_file": open(file_path, "rb")}
+        with open(file_path, "rb") as fp:
+            files = {"evidence_file": (Path(file_path).name, fp, "application/json")}
+            resp = self._session.post(f"{self.BASE_URL}/{evidence_id}/attach",files=files,timeout=30)
 
-        response = requests.post(f"{self.BASE_URL}/{evidence_id}/attach", headers=self.headers, files=files, timeout=20)
+        if resp.status_code == 401:
+            raise PermissionError("401 from Anecdotes")
+        if resp.status_code != 201:
+            raise RuntimeError(f"attach failed: {resp.status_code} - {resp.text}")
 
-        if not response.ok:
-            logger.error("Upload failed", extra={"status": response.status_code, "msg": response.text})
-            raise Exception(f"Upload failed: {response.status_code} - {response.text}")
-
-        logger.info("Upload successful", evidence=evidence_name, evidence_id=evidence_id)
+        return True
