@@ -77,15 +77,16 @@ def process_and_upload(
 
 
 def main():
-    session = utils.build_session()
-    soludev_client = SoluDevClient(SOLUDEV_BASE_URL, SOLUDEV_USERNAME, SOLUDEV_API_KEY, session, TIMEOUT_SECONDS)
+    session_soludev = utils.build_session()
+    session_anecdotes = utils.build_session()
+    soludev_client = SoluDevClient(SOLUDEV_BASE_URL, SOLUDEV_USERNAME, SOLUDEV_API_KEY, session_soludev, TIMEOUT_SECONDS)
     soludev_client.login()
 
-    anecdotes_auth = AnecdotesAuth(api_key=ANECDOTES_API_KEY, session=session)
-    anecdotes_auth.apply(session)
+    anecdotes_auth = AnecdotesAuth(api_key=ANECDOTES_API_KEY, session=session_anecdotes)
+    anecdotes_auth.apply(session_anecdotes)
 
     backup = LocalBackup(BACKUP_FILE_PATH)
-    uploader = AnecdotesUploader(session=session, service_id="SoluDev")
+    uploader = AnecdotesUploader(session=session_anecdotes, service_id="SoluDev")
 
     success = False
     while not success:

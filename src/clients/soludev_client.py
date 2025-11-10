@@ -23,7 +23,8 @@ class SoluDevClient:
         try:
             response = self.session.post(f"{self.base_url}/login", json=self.credentials, timeout=self.timeout)
             response.raise_for_status()
-            token = response.json().get("token")
+            data = response.json()
+            token = data.get("access_token")
 
             if not token:
                 logger.error("Login failed: token missing in response")
