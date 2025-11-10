@@ -10,7 +10,6 @@
     "JWT_EXPIRY_BUFFER_SECONDS": 3300
   },
   "HTTP": {
-    "SOLUDEV_BASE_URL": "http://10.1.0.14:8080",
     "TIMEOUT_SECONDS": 30,
     "ANECDOTES_AUTH_EXCHANGE_URL": "https://gateway.anecdotes.ai/identity/v1/apikey/exchange",
     "ANECDOTES_UPLOADER_BASE_URL": "https://gateway.anecdotes.ai/evidence/v1/evidence",
