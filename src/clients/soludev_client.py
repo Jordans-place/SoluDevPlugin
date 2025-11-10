@@ -18,17 +18,32 @@ class SoluDevClient:
         self.timeout = timeout
 
     def login(self):
-        response = self.session.post(f"{self.base_url}/login", json=self.credentials, timeout=self.timeout)
-        response.raise_for_status()
-        token = response.json().get("token")
+        logger.info(f"Attempting login to {self.base_url}/login")
 
-        if not token:
-            raise RuntimeError("SoluDev login failed: missing 'token'")
+        try:
+            response = self.session.post(f"{self.base_url}/login", json=self.credentials, timeout=self.timeout)
+            response.raise_for_status()
+            token = response.json().get("token")
 
-        self.session.headers.update({"Authorization": f"Bearer {token}"})
-        logger.info("SoluDev login successful")
+            if not token:
+                logger.error("Login failed: token missing in response")
+                raise RuntimeError("SoluDev login failed: missing 'token'")
+
+            self.session.headers.update({"Authorization": f"Bearer {token}"})
+            logger.info("SoluDev login successful")
+
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Login request timed out: {e}")
+            raise
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Login HTTP error: {e.response.status_code} - {e}")
+            raise
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Login request failed: {e}")
+            raise
 
     def get_users(self) -> list[User]:
+        logger.info("Start fetching users")
         page = 1
         users: list[dict] = []
 
@@ -60,4 +75,3 @@ class SoluDevClient:
 
         logger.info("Fetched roles", count=len(roles))
         return [Role(**role) for role in roles]
-

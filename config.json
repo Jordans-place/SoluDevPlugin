@@ -6,22 +6,29 @@
     "ROLES_FILE_NAME": "roles.json",
     "EVIDENCE_IDS_FILE_NAME":"evidence_ids.json",
     "EVIDENCE_NAME_PREFIX": "SoluDev",
-    "RETRY_DELAY_SECONDS": 60
+    "RETRY_DELAY_SECONDS": 60,
+    "JWT_EXPIRY_BUFFER_SECONDS": 3300
   },
   "HTTP": {
     "SOLUDEV_BASE_URL": "http://10.1.0.14:8080",
-    "TIMEOUT_SECONDS": 10,
+    "TIMEOUT_SECONDS": 30,
     "ANECDOTES_AUTH_EXCHANGE_URL": "https://gateway.anecdotes.ai/identity/v1/apikey/exchange",
-    "ANECDOTES_UPLOADER_BASE_URL": "https://gateway.anecdotes.ai/evidence/v1/evidence"
+    "ANECDOTES_UPLOADER_BASE_URL": "https://gateway.anecdotes.ai/evidence/v1/evidence",
+    "MIN_POOL_CONNECTIONS": 10,
+    "MAX_POOL_CONNECTIONS": 20
   },
   "LOGGING": {
     "MAIN_COMPONENT_NAME": "MAIN",
     "SOLUDEV_CLIENT_NAME": "SOLUDEV_CLIENT",
     "ANECDOTES_UPLOADER_NAME": "ANECDOTES_UPLOADER",
+    "AUTH_COMPONENT_NAME": "ANECDOTES_AUTH",
+    "BACKUP_COMPONENT_NAME": "LOCAL_BACKUP",
     "COMPONENT_TO_LOG_FILE":{
       "MAIN": "logs/main.log",
       "SOLUDEV_CLIENT": "logs/soludev_client.log",
-      "ANECDOTES_UPLOADER": "logs/anecdotes_uploader.log"
+      "ANECDOTES_UPLOADER": "logs/anecdotes_uploader.log",
+      "ANECDOTES_AUTH": "logs/anecdotes_auth.log",
+      "LOCAL_BACKUP": "logs/local_backup.log"
     }
   }
 }

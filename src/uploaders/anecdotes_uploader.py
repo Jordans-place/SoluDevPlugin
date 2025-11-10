@@ -13,9 +13,7 @@ ANECDOTES_UPLOADER_NAME: str = config.LOGGING.ANECDOTES_UPLOADER_NAME
 EVIDENCE_IDS_FILE_NAME: str = config.SERVICE.EVIDENCE_IDS_FILE_NAME
 EVIDENCE_IDS_FILE_PATH: Path = utils.get_output_file_path(EVIDENCE_IDS_FILE_NAME)
 LOG_FILE_NAME: str = config.LOGGING.COMPONENT_TO_LOG_FILE.get(ANECDOTES_UPLOADER_NAME)
-
-CREATE_COLLECTION_TIMEOUT_SECONDS: int = 20
-ATTACH_FILE_TIMEOUT_SECONDS: int = 30
+TIMEOUT_SECONDS: int = config.HTTP.TIMEOUT_SECONDS
 
 logger = CustomLogger(ANECDOTES_UPLOADER_NAME, LOG_FILE_NAME)
 
@@ -44,7 +42,8 @@ class AnecdotesUploader:
         data = self._load_evidence_ids()
         data[name] = evidence_id
         try:
-            self.evidence_ids_file.write_text(json.dumps(data, indent=4))
+            with open(self.evidence_ids_file, 'w', encoding='utf-8') as file:
+                json.dump(data, file, indent=4)
         except IOError as error:
             logger.error(f"Failed to save evidence ID: {error}")
             raise
@@ -61,7 +60,7 @@ class AnecdotesUploader:
         response = self._session.post(
             f"{self.base_url}/create",
             files=files,
-            timeout=CREATE_COLLECTION_TIMEOUT_SECONDS
+            timeout=TIMEOUT_SECONDS
         )
         if response.status_code != HTTPStatus.CREATED:
             raise RuntimeError(f"create failed: {response.status_code} - {response.text}")
@@ -90,7 +89,7 @@ class AnecdotesUploader:
                 response = self._session.post(
                     f"{self.base_url}/{evidence_id}/attach",
                     files=files,
-                    timeout=ATTACH_FILE_TIMEOUT_SECONDS
+                    timeout=TIMEOUT_SECONDS
                 )
 
             if response.status_code == HTTPStatus.UNAUTHORIZED:
@@ -102,4 +101,3 @@ class AnecdotesUploader:
         except IOError as error:
             logger.error(f"Failed to read file {file_path}: {error}")
             raise
-

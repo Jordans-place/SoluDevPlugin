@@ -10,7 +10,6 @@ from src.common.logger import CustomLogger
 from src.storage.local_backup import LocalBackup
 from src.uploaders.anecdotes_uploader import AnecdotesAuthenticationError, AnecdotesUploader
 
-
 BACKUP_FILE_NAME: str = config.SERVICE.BACKUP_FILE_NAME
 EVIDENCE_NAME_PREFIX: str = config.SERVICE.EVIDENCE_NAME_PREFIX
 MAIN_COMPONENT_NAME: str = config.LOGGING.MAIN_COMPONENT_NAME
@@ -36,15 +35,28 @@ def _get_evidence_name(file_stem: str) -> str:
 
 
 def _save_data_to_file(file_path: Path, data: list[dict]):
-    file_path.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
+    logger.info(f"Saving data to file: {file_path}")
+
+    try:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
+    except (IOError, TypeError) as e:
+        logger.error(f"Failed to save data to {file_path}: {e}")
+        raise
 
 
-def upload_with_retry(uploader: AnecdotesUploader, auth: AnecdotesAuth, evidence_name: str, file_path: Path) -> None:
+def upload_with_retry(uploader: AnecdotesUploader, auth: AnecdotesAuth, evidence_name: str, file_path: Path):
+    logger.info(f"Uploading file: {file_path} as evidence: {evidence_name}")
+
     try:
         uploader.upload_file(evidence_name, str(file_path))
-    except AnecdotesAuthenticationError:
+        logger.info(f"Successfully uploaded {evidence_name}")
+    except AnecdotesAuthenticationError as e:
+        logger.warning(f"Authentication failed during upload, refreshing token: {e}")
         auth.refresh_token(uploader._session)
+        logger.info(f"Retrying upload for {evidence_name} after token refresh")
         uploader.upload_file(evidence_name, str(file_path))
+        logger.info(f"Successfully uploaded {evidence_name} after retry")
 
 
 def process_and_upload(
@@ -60,6 +72,7 @@ def process_and_upload(
     upload_with_retry(uploader, auth, _get_evidence_name(ROLES_FILE_PATH.stem), ROLES_FILE_PATH)
 
     if backup is not None:
+        logger.info("Clearing backup after successful upload")
         backup.clear()
 
 
@@ -95,6 +108,8 @@ def main():
         except Exception as e:
             logger.error("Process failed, retrying in 60s...", extra={"error": str(e)})
             sleep(RETRY_DELAY_SECONDS)
+
+    logger.info("Process completed successfully")
 
 
 if __name__ == "__main__":
