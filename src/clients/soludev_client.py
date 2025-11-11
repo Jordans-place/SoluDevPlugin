@@ -1,8 +1,8 @@
 import requests
 
+from src.common.config import config
 from src.common.logger import CustomLogger
 from src.common.models import User, Role
-from src.common.config import config
 
 SOLUDEV_CLIENT_NAME: str = config.LOGGING.SOLUDEV_CLIENT_NAME
 LOG_FILE_NAME: str = config.LOGGING.COMPONENT_TO_LOG_FILE.get(SOLUDEV_CLIENT_NAME)
@@ -36,9 +36,11 @@ class SoluDevClient:
         except requests.exceptions.Timeout as e:
             logger.error(f"Login request timed out: {e}")
             raise
+
         except requests.exceptions.HTTPError as e:
             logger.error(f"Login HTTP error: {e.response.status_code} - {e}")
             raise
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Login request failed: {e}")
             raise
@@ -52,10 +54,8 @@ class SoluDevClient:
             response = self.session.get(f"{self.base_url}/users", params={"page": page}, timeout=self.timeout)
             response.raise_for_status()
             json_data = response.json()
-
             users_batch = json_data.get("users", [])
             users.extend(users_batch)
-
             logger.info("Fetched users page", page=page, count=len(users_batch), total=len(users))
 
             pagination = json_data.get("pagination", {})
@@ -70,9 +70,7 @@ class SoluDevClient:
     def get_roles(self) -> list[Role]:
         response = self.session.get(f"{self.base_url}/roles", timeout=self.timeout)
         response.raise_for_status()
-
         json_data = response.json()
         roles = json_data.get("roles", [])
-
         logger.info("Fetched roles", count=len(roles))
         return [Role(**role) for role in roles]

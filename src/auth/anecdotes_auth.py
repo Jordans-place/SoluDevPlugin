@@ -6,8 +6,8 @@ from src.common.config import config
 from src.common.logger import CustomLogger
 
 ANECDOTES_AUTH_EXCHANGE_URL: str = config.HTTP.ANECDOTES_AUTH_EXCHANGE_URL
-TIMEOUT_SECONDS: int = config.HTTP.TIMEOUT_SECONDS
 JWT_EXPIRY_BUFFER_SECONDS: int = config.SERVICE.JWT_EXPIRY_BUFFER_SECONDS
+TIMEOUT_SECONDS: int = config.HTTP.TIMEOUT_SECONDS
 
 AUTH_COMPONENT_NAME: str = config.LOGGING.AUTH_COMPONENT_NAME
 LOG_FILE_NAME: str = config.LOGGING.COMPONENT_TO_LOG_FILE.get(AUTH_COMPONENT_NAME)
@@ -24,7 +24,7 @@ class AnecdotesAuth:
         self._api_key = api_key.strip()
         self._session = session
         self._jwt: Optional[str] = None
-        self._exp_ts: int = 0
+        self._expiration_ts: int = 0
         self.exchange_url = ANECDOTES_AUTH_EXCHANGE_URL
 
     def _exchange(self):
@@ -39,15 +39,17 @@ class AnecdotesAuth:
 
             jwt_token = response.text.strip().strip('"')
             self._jwt = jwt_token
-            self._exp_ts = int(time.time()) + JWT_EXPIRY_BUFFER_SECONDS
+            self._expiration_ts = int(time.time()) + JWT_EXPIRY_BUFFER_SECONDS
+            logger.info(f"JWT token obtained successfully. Expires at timestamp: {self._expiration_ts}")
 
-            logger.info(f"JWT token obtained successfully. Expires at timestamp: {self._exp_ts}")
         except requests.exceptions.Timeout as e:
             logger.error(f"Timeout while exchanging API key: {e}")
             raise
+
         except requests.exceptions.HTTPError as e:
             logger.error(f"HTTP error during token exchange: {e.response.status_code} - {e}")
             raise
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed during token exchange: {e}")
             raise
@@ -58,11 +60,13 @@ class AnecdotesAuth:
         if not self._jwt:
             logger.info("No JWT token found, obtaining new token")
             self._exchange()
-        elif current_time >= self._exp_ts:
-            logger.info(f"JWT token expired (current: {current_time}, expiry: {self._exp_ts}), refreshing token")
+
+        elif current_time >= self._expiration_ts:
+            logger.info(f"JWT token expired (current: {current_time}, expiry: {self._expiration_ts}), refreshing token")
             self._exchange()
+
         else:
-            logger.debug(f"Using existing JWT token (expires in {self._exp_ts - current_time:.0f} seconds)")
+            logger.debug(f"Using existing JWT token (expires in {self._expiration_ts - current_time:.0f} seconds)")
 
         return self._jwt
 

@@ -19,13 +19,16 @@ class LocalBackup:
         logger.info(f"Attempting to save backup to {self.path}")
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
+
             with open(self.path, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=4)
+
             logger.info(f"Backup saved successfully to {self.path}")
 
         except IOError as error:
             logger.error(f"IO error while saving backup to {self.path}: {error}")
             raise RuntimeError(f"Failed to save backup: {error}") from error
+
         except TypeError as error:
             logger.error(f"Data serialization error while saving backup: {error}")
             raise RuntimeError(f"Failed to save backup: {error}") from error
@@ -46,6 +49,7 @@ class LocalBackup:
         except JSONDecodeError as error:
             logger.error(f"JSON decode error while loading backup from {self.path}: {error}")
             return {}
+
         except IOError as error:
             logger.error(f"IO error while loading backup from {self.path}: {error}")
             return {}

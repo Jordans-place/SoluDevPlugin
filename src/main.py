@@ -53,7 +53,7 @@ def upload_with_retry(uploader: AnecdotesUploader, auth: AnecdotesAuth, evidence
         logger.info(f"Successfully uploaded {evidence_name}")
     except AnecdotesAuthenticationError as e:
         logger.warning(f"Authentication failed during upload, refreshing token: {e}")
-        auth.refresh_token(uploader._session)
+        auth.refresh_token(uploader.session)
         logger.info(f"Retrying upload for {evidence_name} after token refresh")
         uploader.upload_file(evidence_name, str(file_path))
         logger.info(f"Successfully uploaded {evidence_name} after retry")
@@ -86,7 +86,7 @@ def main():
     anecdotes_auth.apply(session_anecdotes)
 
     backup = LocalBackup(BACKUP_FILE_PATH)
-    uploader = AnecdotesUploader(session=session_anecdotes, service_id="SoluDev")
+    uploader = AnecdotesUploader(session=session_anecdotes)
 
     success = False
     while not success:
